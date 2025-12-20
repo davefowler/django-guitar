@@ -299,6 +299,92 @@ class AuditLog(GuitarModel, models.Model):
             return True
 ```
 
+### Composable Predicates
+
+Inspired by [django-rules](https://github.com/dfunckt/django-rules), Guitar supports composable predicates for reusable permission logic:
+
+```python
+from guitar import predicate
+
+# Define reusable predicates
+@predicate
+def is_owner(request, obj):
+    return obj.user == request.user
+
+@predicate
+def is_admin(request, obj):
+    return request.user.is_staff
+
+@predicate
+def is_public(request, obj):
+    return getattr(obj, 'is_public', False)
+
+@predicate
+def is_published(request, obj):
+    return obj.status == 'published'
+
+# Compose with | (or), & (and), ~ (not)
+can_view = is_owner | is_admin | is_public
+can_edit = is_owner | is_admin
+can_delete = is_owner & ~is_published  # Owner can delete, but not if published
+can_publish = is_admin & ~is_published  # Only admins, and only if not already published
+```
+
+**Use in `check_*` methods:**
+
+```python
+class Article(GuitarModel, models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    status = models.CharField(max_length=20)
+    is_public = models.BooleanField(default=False)
+    
+    class GuitarManager:
+        def filter_read(self, request, queryset):
+            # Filter-based (returns queryset)
+            return queryset.filter(
+                Q(user=request.user) | Q(is_public=True) | Q(user__is_staff=True)
+            )
+        
+        def check_write(self, request, instance, data):
+            # Predicate-based (returns bool, raises if False)
+            if not can_edit(request, instance):
+                raise PermissionDenied("Cannot edit this article")
+            
+            # Validate specific field changes
+            if 'status' in data and data['status'] == 'published':
+                if not can_publish(request, instance):
+                    raise PermissionDenied("Only admins can publish")
+            
+            return data
+        
+        def check_delete(self, request, instance):
+            if not can_delete(request, instance):
+                raise PermissionDenied("Cannot delete published articles")
+```
+
+**Why both patterns?**
+
+| Pattern | Returns | Best for |
+|---------|---------|----------|
+| `filter_*` | QuerySet | "Which rows can user access?" (listing, bulk ops) |
+| Predicates | Boolean | "Can user do X to this specific object?" (validation) |
+
+Predicates are especially useful for:
+- Field-level validation ("can user set status to published?")
+- Complex conditional logic
+- Reusing the same rules across multiple models
+
+**Predicate with arguments:**
+
+```python
+@predicate
+def has_role(request, obj, role):
+    return obj.memberships.filter(user=request.user, role=role).exists()
+
+# Usage
+can_manage = has_role.curry('admin') | has_role.curry('owner')
+```
+
 ### 4. TypeScript Client Generation
 
 Auto-generated TypeScript that mirrors Django's ORM:

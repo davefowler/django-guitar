@@ -197,6 +197,36 @@ class GuitarManager:
         return data
 ```
 
+### Composable Predicates
+
+Reusable permission logic inspired by django-rules:
+
+```python
+from guitar import predicate
+
+@predicate
+def is_owner(request, obj):
+    return obj.user == request.user
+
+@predicate
+def is_admin(request, obj):
+    return request.user.is_staff
+
+# Compose with | (or), & (and), ~ (not)
+can_edit = is_owner | is_admin
+can_delete = is_owner & ~is_published
+```
+
+Use in `check_*` methods:
+
+```python
+class GuitarManager:
+    def check_write(self, request, instance, data):
+        if not can_edit(request, instance):
+            raise PermissionDenied()
+        return data
+```
+
 ### Lifecycle Hooks
 
 | Method | When Called | Returns |

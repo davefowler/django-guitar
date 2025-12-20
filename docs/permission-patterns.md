@@ -310,6 +310,70 @@ class Chart(GuitarModel, models.Model):
 
 ---
 
+## Composable Predicates
+
+For complex validation logic, use composable predicates (inspired by django-rules):
+
+```python
+from guitar import predicate
+
+# Define reusable predicates
+@predicate
+def is_owner(request, obj):
+    return obj.user == request.user
+
+@predicate
+def is_admin(request, obj):
+    return request.user.is_staff
+
+@predicate
+def is_published(request, obj):
+    return obj.status == 'published'
+
+@predicate
+def is_draft(request, obj):
+    return obj.status == 'draft'
+
+# Compose with | (or), & (and), ~ (not)
+can_view = is_owner | is_admin | is_published
+can_edit = (is_owner | is_admin) & ~is_published  # Can't edit published
+can_delete = is_owner & is_draft  # Only owner, only drafts
+can_publish = is_admin
+```
+
+Use in GuitarManager:
+
+```python
+class Article(GuitarModel, models.Model):
+    class GuitarManager:
+        def check_write(self, request, instance, data):
+            if not can_edit(request, instance):
+                raise PermissionDenied("Cannot edit this article")
+            
+            # Check specific transitions
+            if data.get('status') == 'published':
+                if not can_publish(request, instance):
+                    raise PermissionDenied("Only admins can publish")
+            
+            return data
+        
+        def check_delete(self, request, instance):
+            if not can_delete(request, instance):
+                raise PermissionDenied("Can only delete your own drafts")
+```
+
+**When to use predicates vs filter_*:**
+
+| Use Case | Best Approach |
+|----------|---------------|
+| "Which objects can user see?" | `filter_read()` |
+| "Can user edit this specific field?" | Predicate in `check_write()` |
+| "Can user perform this state transition?" | Predicate in `check_write()` |
+| Bulk operations | `filter_*()` methods |
+| Single-object validation | Predicates |
+
+---
+
 ## Testing Permissions
 
 ```python

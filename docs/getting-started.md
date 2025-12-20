@@ -100,9 +100,11 @@ It works just like Django's ORM!
 
 ---
 
-## Adding Permissions
+## Model-Level Security (MLS)
 
-By default, anyone can access your models. Add a `GuitarManager` to control access:
+Django Guitar uses **Model-Level Security** - permissions defined once, on your models. No more scattering permission checks across endpoints.
+
+Add a `GuitarManager` to control access:
 
 ```python
 class Chart(GuitarModel, models.Model):

@@ -1,6 +1,8 @@
 # Permission Patterns Cookbook
 
-Common permission scenarios and how to implement them in Django Guitar.
+Common Model-Level Security (MLS) patterns for Django Guitar.
+
+MLS centralizes your permissions on the model - define once, enforce everywhere. No more scattered permission checks across endpoints.
 
 ---
 

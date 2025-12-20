@@ -1,6 +1,6 @@
 # API Reference
 
-Complete reference for Django Guitar configuration and methods.
+Complete reference for Django Guitar configuration and Model-Level Security (MLS) methods.
 
 ---
 

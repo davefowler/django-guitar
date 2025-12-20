@@ -26,6 +26,80 @@ Django Guitar brings this pattern to Django with a Pythonic, Django-native appro
 
 ---
 
+## Model-Level Security (MLS)
+
+A key innovation in Django Guitar is **Model-Level Security (MLS)** - row-level permissions defined directly on your Django models.
+
+### The Problem with Traditional Approaches
+
+**Endpoint-based permissions** (typical REST):
+```python
+# permissions.py
+class IsOwner(BasePermission):
+    def has_object_permission(self, request, view, obj):
+        return obj.user == request.user
+
+# views.py - repeated for every endpoint
+class ChartViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated, IsOwner]
+    
+    def get_queryset(self):
+        return Chart.objects.filter(user=self.request.user)
+```
+- ❌ Scattered across many files
+- ❌ Easy to forget on new endpoints
+- ❌ Hard to audit "who can access what"
+
+**Database RLS** (PostgreSQL):
+```sql
+CREATE POLICY chart_access ON charts
+    USING (user_id = current_user_id());
+```
+- ✅ Centralized and enforced
+- ❌ SQL policies are awkward to write
+- ❌ Difficult to test
+- ❌ Hard to debug
+- ❌ No Django ORM integration
+
+### The MLS Solution
+
+**Model-Level Security** gives you the centralization of RLS with the ergonomics of Python:
+
+```python
+class Chart(GuitarModel, models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    
+    class GuitarManager:
+        def filter_read(self, request, queryset):
+            return queryset.filter(user=request.user)
+        
+        def filter_write(self, request, queryset):
+            return queryset.filter(user=request.user)
+```
+
+- ✅ **Centralized** - One place to define all permissions for a model
+- ✅ **Pythonic** - Write in Python, not SQL
+- ✅ **Testable** - Standard Django test patterns work
+- ✅ **Reviewable** - Easy to read and code review
+- ✅ **Flexible** - Full power of Django ORM, Python logic, external services
+- ✅ **Familiar** - Django developers already organize logic by model
+
+### MLS vs RLS Comparison
+
+| Aspect | Database RLS | Model-Level Security |
+|--------|--------------|---------------------|
+| **Location** | PostgreSQL | Django models |
+| **Language** | SQL | Python |
+| **Testing** | Requires DB fixtures | Standard Django tests |
+| **Debugging** | Query logs, painful | Python debugger, easy |
+| **Code review** | SQL in migrations | Python in models.py |
+| **Django ORM** | No integration | Full integration |
+| **External calls** | Impossible | Easy (APIs, caches, etc.) |
+
+MLS provides the *benefits* of RLS (centralized, declarative security) at the *application layer* where it's easier to work with.
+
+---
+
 ## Core Concepts
 
 ### 1. GuitarModel Mixin

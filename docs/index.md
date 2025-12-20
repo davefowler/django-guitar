@@ -64,11 +64,41 @@ await Chart.objects.filter({ id: 1 }).delete();
 
 ---
 
+## Model-Level Security (MLS)
+
+Traditional APIs scatter permission logic across endpoints. Database RLS centralizes this but requires writing security in SQL. **Django Guitar brings Model-Level Security** - centralized permissions in Python, right where Django developers expect them.
+
+```python
+class Chart(GuitarModel, models.Model):
+    class GuitarManager:
+        def filter_read(self, request, queryset):
+            # Users see their own charts + public ones
+            return queryset.filter(Q(user=request.user) | Q(is_public=True))
+        
+        def filter_write(self, request, queryset):
+            # Users can only edit their own
+            return queryset.filter(user=request.user)
+```
+
+**Why MLS over RLS?**
+
+| | Database RLS | Model-Level Security |
+|-|--------------|---------------------|
+| **Language** | SQL policies | Python |
+| **Testing** | Difficult | Standard Django tests |
+| **Code review** | Awkward | Natural |
+| **Debugging** | 😰 | Easy |
+| **Django integration** | None | Native |
+
+Define once. Enforce everywhere. Review easily.
+
+---
+
 ## Features
 
 | Feature | Description |
 |---------|-------------|
-| **Model-Level Permissions** | Define read/write/delete filters directly on your models |
+| **Model-Level Security** | Row-level permissions defined once, on your models |
 | **TypeScript Generation** | Auto-generated types that stay in sync |
 | **Django Query Syntax** | `filter`, `exclude`, `order_by`, `select_related` - all the hits |
 | **Custom Methods** | Expose custom QuerySet methods to the frontend |

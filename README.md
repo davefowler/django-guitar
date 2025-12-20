@@ -18,11 +18,41 @@ await Chart.objects.create({ name: "My Chart", data: [...] });
 ## Features
 
 - 🔌 **Auto-generated API** - No serializers, viewsets, or URL routing to write
-- 🔒 **Model-level permissions** - Define row-level security directly on your models  
+- 🔒 **Model-Level Security (MLS)** - Row-level permissions defined once, on your models  
 - 📝 **TypeScript types** - Full type safety with auto-generated interfaces
 - 🔗 **Relationships** - `select_related` and `prefetch_related` just like Django
 - 🎯 **Django syntax** - `filter`, `exclude`, `order_by` - all the hits
 - ⚡ **Custom methods** - Expose custom QuerySet methods to the frontend
+
+## Model-Level Security (MLS)
+
+Traditional REST APIs scatter permission logic across dozens of endpoints. Database-level Row-Level Security (RLS) centralizes this, but SQL-based policies are awkward to write, test, and maintain.
+
+**Django Guitar introduces Model-Level Security (MLS)** - the best of both worlds:
+
+```python
+class Chart(GuitarModel, models.Model):
+    class GuitarManager:
+        def filter_read(self, request, queryset):
+            return queryset.filter(user=request.user)
+        
+        def filter_write(self, request, queryset):
+            return queryset.filter(user=request.user)
+```
+
+**Why MLS?**
+
+| Approach | Where | Pros | Cons |
+|----------|-------|------|------|
+| **Endpoint-based** | Views/Controllers | Familiar | Scattered, easy to miss |
+| **Database RLS** | PostgreSQL | Centralized, enforced | SQL policies are awkward |
+| **Model-Level (MLS)** | Django Models | Centralized, Pythonic | — |
+
+- ✅ **Centralized** - One place to define and audit all permissions
+- ✅ **Pythonic** - Write permissions in Python, not SQL
+- ✅ **Reviewable** - Easy to read, test, and code review
+- ✅ **Flexible** - Full power of Django ORM and Python
+- ✅ **Familiar** - Django developers already think in models
 
 ## Quick Start
 

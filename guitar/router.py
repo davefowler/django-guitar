@@ -392,8 +392,11 @@ class GuitarRouter:
         # LIST endpoint
         if 'list' in operations:
             @self.router.get(f"/{endpoint_name}/", response=List[schemas['read']])
-            def list_items(request: HttpRequest, **query_params) -> List[Dict[str, Any]]:
+            def list_items(request: HttpRequest) -> List[Dict[str, Any]]:
                 self._check_permissions(request, model_class)
+                
+                # Get query parameters from request
+                query_params = {k: v for k, v in request.GET.items()}
                 
                 manager = get_manager()
                 queryset = model_class.objects.all()
@@ -414,10 +417,12 @@ class GuitarRouter:
                 )
                 
                 # Apply pagination
+                limit_val = query_params.get('_limit')
+                offset_val = query_params.get('_offset')
                 queryset = self._apply_pagination(
                     queryset,
-                    query_params.get('_limit'),
-                    query_params.get('_offset'),
+                    int(limit_val) if limit_val else None,
+                    int(offset_val) if offset_val else None,
                     model_class,
                 )
                 
@@ -468,7 +473,7 @@ class GuitarRouter:
                 manager = get_manager()
                 
                 # Convert to dict
-                create_data = data.dict(exclude_unset=True)
+                create_data = data.model_dump(exclude_unset=True)
                 
                 # Run permission check
                 try:
@@ -510,7 +515,7 @@ class GuitarRouter:
                     raise HttpError(404, "Not found")
                 
                 # Convert to dict
-                update_data = data.dict(exclude_unset=True)
+                update_data = data.model_dump(exclude_unset=True)
                 
                 # Run permission check
                 try:

@@ -173,5 +173,5 @@ chart.dashboard  // { id: 5, name: 'Sales Dashboard', ... }
 - [API Reference](api-reference.md) - All configuration options
 - [Permission Patterns](permission-patterns.md) - Common permission scenarios
 - [TypeScript Client](typescript-client.md) - Frontend usage details
-- [Examples](../examples/) - Full example applications
+- [Examples](https://github.com/davefowler/django-guitar/tree/main/examples) - Full example applications
 

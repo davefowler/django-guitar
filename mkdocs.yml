@@ -1,8 +1,8 @@
 site_name: Django Guitar
 site_description: Django ORM for your frontend
-site_url: https://django-guitar.dev
-repo_url: https://github.com/django-guitar/django-guitar
-repo_name: django-guitar/django-guitar
+site_url: https://davefowler.github.io/django-guitar/
+repo_url: https://github.com/davefowler/django-guitar
+repo_name: davefowler/django-guitar
 
 theme:
   name: material
@@ -57,7 +57,7 @@ plugins:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/django-guitar/django-guitar
+      link: https://github.com/davefowler/django-guitar
     - icon: fontawesome/brands/python
       link: https://pypi.org/project/django-guitar/
 

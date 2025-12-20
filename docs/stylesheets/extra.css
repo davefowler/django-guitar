@@ -1,0 +1,247 @@
+/* Django-inspired color scheme for Django Guitar */
+
+:root {
+  /* Django greens */
+  --django-green-dark: #0C4B33;
+  --django-green: #20AA76;
+  --django-green-light: #44B78B;
+  --django-green-lighter: #C9F0DD;
+  
+  /* Backgrounds */
+  --django-bg: #FCFCFC;
+  --django-bg-alt: #F8F8F8;
+  --django-bg-code: #F4F4F4;
+  
+  /* Text */
+  --django-text: #333333;
+  --django-text-muted: #666666;
+  
+  /* Accents */
+  --django-link: #20AA76;
+  --django-link-hover: #0C4B33;
+  
+  /* Material theme overrides */
+  --md-primary-fg-color: #0C4B33;
+  --md-primary-fg-color--light: #44B78B;
+  --md-primary-fg-color--dark: #092E20;
+  --md-primary-bg-color: #FFFFFF;
+  --md-primary-bg-color--light: #FFFFFF;
+  
+  --md-accent-fg-color: #20AA76;
+  --md-accent-fg-color--transparent: rgba(32, 170, 118, 0.1);
+  
+  --md-typeset-a-color: #20AA76;
+  
+  --md-code-bg-color: #F4F4F4;
+  --md-code-fg-color: #333333;
+}
+
+/* Header - Django dark green */
+.md-header {
+  background-color: #0C4B33;
+}
+
+.md-header__title {
+  font-weight: 700;
+}
+
+/* Navigation tabs */
+.md-tabs {
+  background-color: #0C4B33;
+}
+
+/* Links */
+.md-typeset a {
+  color: #20AA76;
+}
+
+.md-typeset a:hover {
+  color: #0C4B33;
+}
+
+/* Sidebar navigation */
+.md-nav__link--active {
+  color: #0C4B33 !important;
+  font-weight: 600;
+}
+
+.md-nav__link:hover {
+  color: #20AA76;
+}
+
+/* Code blocks - Django style */
+.md-typeset code {
+  background-color: #F4F4F4;
+  color: #333333;
+  border: 1px solid #E8E8E8;
+  border-radius: 3px;
+  padding: 0.1em 0.3em;
+}
+
+.md-typeset pre {
+  background-color: #F4F4F4;
+  border: 1px solid #E8E8E8;
+  border-radius: 4px;
+}
+
+.md-typeset pre > code {
+  background-color: transparent;
+  border: none;
+}
+
+/* Admonitions - Django colors */
+.md-typeset .admonition.note,
+.md-typeset details.note {
+  border-color: #44B78B;
+}
+
+.md-typeset .note > .admonition-title,
+.md-typeset .note > summary {
+  background-color: rgba(68, 183, 139, 0.1);
+  border-color: #44B78B;
+}
+
+.md-typeset .note > .admonition-title::before,
+.md-typeset .note > summary::before {
+  background-color: #44B78B;
+}
+
+/* Info boxes */
+.md-typeset .admonition.info,
+.md-typeset details.info {
+  border-color: #20AA76;
+}
+
+.md-typeset .info > .admonition-title,
+.md-typeset .info > summary {
+  background-color: rgba(32, 170, 118, 0.1);
+}
+
+/* Tables - Django style */
+.md-typeset table:not([class]) {
+  border: 1px solid #E8E8E8;
+  display: table;
+}
+
+.md-typeset table:not([class]) th {
+  background-color: #0C4B33;
+  color: white;
+  font-weight: 600;
+  padding: 10px 15px;
+}
+
+.md-typeset table:not([class]) td {
+  padding: 10px 15px;
+  border-bottom: 1px solid #E8E8E8;
+}
+
+.md-typeset table:not([class]) tr:nth-child(even) {
+  background-color: #F8F8F8;
+}
+
+/* Search */
+.md-search__input {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.md-search__input::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Footer */
+.md-footer {
+  background-color: #0C4B33;
+}
+
+/* Buttons */
+.md-typeset .md-button {
+  border-color: #0C4B33;
+  color: #0C4B33;
+}
+
+.md-typeset .md-button:hover {
+  background-color: #0C4B33;
+  color: white;
+  border-color: #0C4B33;
+}
+
+.md-typeset .md-button--primary {
+  background-color: #0C4B33;
+  color: white;
+  border-color: #0C4B33;
+}
+
+.md-typeset .md-button--primary:hover {
+  background-color: #20AA76;
+  border-color: #20AA76;
+}
+
+/* Copy button in code blocks */
+.md-clipboard {
+  color: #666666;
+}
+
+.md-clipboard:hover {
+  color: #20AA76;
+}
+
+/* TOC highlighting */
+.md-nav__link--active,
+.md-nav__link:focus {
+  color: #0C4B33;
+}
+
+/* Django-style font stack */
+.md-typeset {
+  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+/* Headings */
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3,
+.md-typeset h4 {
+  color: #0C4B33;
+  font-weight: 700;
+}
+
+.md-typeset h1 {
+  border-bottom: 2px solid #44B78B;
+  padding-bottom: 0.3em;
+}
+
+/* Horizontal rules */
+.md-typeset hr {
+  border-top: 1px solid #44B78B;
+}
+
+/* Selection highlight */
+::selection {
+  background-color: #C9F0DD;
+}
+
+/* Card grid for homepage */
+.md-typeset .grid.cards > ul > li {
+  border: 1px solid #E8E8E8;
+  border-radius: 4px;
+}
+
+.md-typeset .grid.cards > ul > li:hover {
+  border-color: #44B78B;
+  box-shadow: 0 2px 8px rgba(12, 75, 51, 0.1);
+}
+
+/* Django-style "NEW" badge */
+.md-typeset .new-badge::after {
+  content: "NEW";
+  background-color: #20AA76;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 0.7em;
+  margin-left: 0.5em;
+  vertical-align: middle;
+}
+

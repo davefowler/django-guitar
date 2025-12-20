@@ -287,7 +287,7 @@ class GuitarManager:
 
 ### Soft Delete
 
-See [soft deletes](../spec.md#soft-deletes) in the spec.
+Soft delete pattern - override the delete method in your QuerySet:
 
 ```python
 class SoftDeleteQuerySet(models.QuerySet):

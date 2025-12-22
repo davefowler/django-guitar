@@ -1598,6 +1598,323 @@ templates/               # User's templates
 
 ---
 
+## React Integration via Custom Elements
+
+### The Insight
+
+Since we're building with Custom Elements (Web Components), React integration is essentially **free**. Custom Elements are native browser APIs that React can use directly.
+
+### Basic Usage in React
+
+```tsx
+// Just use the custom elements like any HTML element
+const TodoApp: React.FC = () => {
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  
+  return (
+    <div className="todo-app">
+      <aside>
+        {/* Guitar custom element works directly in JSX */}
+        <guitar-list
+          model="todo"
+          template="list-item"
+          filter={JSON.stringify({ completed: false })}
+        />
+      </aside>
+      
+      <main>
+        {selectedId && (
+          <guitar-detail
+            model="todo"
+            item-id={String(selectedId)}
+            template="full"
+          />
+        )}
+      </main>
+    </div>
+  );
+};
+```
+
+### TypeScript Declarations
+
+Add type declarations so TypeScript knows about Guitar elements:
+
+```typescript
+// guitar/react.d.ts
+declare namespace JSX {
+  interface IntrinsicElements {
+    'guitar-list': React.DetailedHTMLProps<
+      React.HTMLAttributes<HTMLElement> & {
+        model: string;
+        template?: string;
+        filter?: string;
+        'order-by'?: string;
+        'paginate-by'?: string;
+      },
+      HTMLElement
+    >;
+    
+    'guitar-detail': React.DetailedHTMLProps<
+      React.HTMLAttributes<HTMLElement> & {
+        model: string;
+        'item-id': string;
+        template?: string;
+      },
+      HTMLElement
+    >;
+    
+    'guitar-edit': React.DetailedHTMLProps<
+      React.HTMLAttributes<HTMLElement> & {
+        model: string;
+        'item-id'?: string;
+        fields?: string;
+        'auto-save'?: boolean;
+      },
+      HTMLElement
+    >;
+  }
+}
+```
+
+### Handling Events in React
+
+Custom element events need a ref to attach listeners:
+
+```tsx
+const TodoList: React.FC<{ onSelect: (todo: Todo) => void }> = ({ onSelect }) => {
+  const listRef = useRef<HTMLElement>(null);
+  
+  useEffect(() => {
+    const element = listRef.current;
+    if (!element) return;
+    
+    const handleSelect = (e: CustomEvent) => {
+      onSelect(e.detail);
+    };
+    
+    element.addEventListener('guitar-select', handleSelect);
+    return () => element.removeEventListener('guitar-select', handleSelect);
+  }, [onSelect]);
+  
+  return (
+    <guitar-list
+      ref={listRef}
+      model="todo"
+      template="list-item"
+    />
+  );
+};
+```
+
+### Thin React Wrappers (Optional)
+
+For a more React-native feel, wrap the custom elements:
+
+```tsx
+// guitar/react/GuitarList.tsx
+import { useRef, useEffect, forwardRef } from 'react';
+
+interface GuitarListProps<T> {
+  model: string;
+  template?: string;
+  filter?: Record<string, unknown>;
+  orderBy?: string;
+  paginateBy?: number;
+  onSelect?: (item: T) => void;
+  onCreate?: (item: T) => void;
+  onUpdate?: (item: T) => void;
+  onDelete?: (item: T) => void;
+  className?: string;
+  children?: React.ReactNode;
+}
+
+export const GuitarList = forwardRef(<T,>(
+  props: GuitarListProps<T>,
+  ref: React.Ref<HTMLElement>
+) => {
+  const {
+    model,
+    template = 'list-item',
+    filter,
+    orderBy,
+    paginateBy,
+    onSelect,
+    onCreate,
+    onUpdate,
+    onDelete,
+    className,
+    children,
+  } = props;
+  
+  const innerRef = useRef<HTMLElement>(null);
+  const elementRef = (ref || innerRef) as React.RefObject<HTMLElement>;
+  
+  // Attach event listeners
+  useEffect(() => {
+    const el = elementRef.current;
+    if (!el) return;
+    
+    const handlers: [string, (e: CustomEvent) => void][] = [];
+    
+    if (onSelect) {
+      const h = (e: CustomEvent) => onSelect(e.detail);
+      el.addEventListener('guitar-select', h);
+      handlers.push(['guitar-select', h]);
+    }
+    if (onCreate) {
+      const h = (e: CustomEvent) => onCreate(e.detail);
+      el.addEventListener('guitar-create', h);
+      handlers.push(['guitar-create', h]);
+    }
+    if (onUpdate) {
+      const h = (e: CustomEvent) => onUpdate(e.detail);
+      el.addEventListener('guitar-update', h);
+      handlers.push(['guitar-update', h]);
+    }
+    if (onDelete) {
+      const h = (e: CustomEvent) => onDelete(e.detail);
+      el.addEventListener('guitar-delete', h);
+      handlers.push(['guitar-delete', h]);
+    }
+    
+    return () => {
+      handlers.forEach(([event, handler]) => {
+        el.removeEventListener(event, handler);
+      });
+    };
+  }, [onSelect, onCreate, onUpdate, onDelete]);
+  
+  return (
+    <guitar-list
+      ref={elementRef}
+      model={model}
+      template={template}
+      filter={filter ? JSON.stringify(filter) : undefined}
+      order-by={orderBy}
+      paginate-by={paginateBy?.toString()}
+      class={className}
+    >
+      {children}
+    </guitar-list>
+  );
+});
+```
+
+### Usage with Wrapper
+
+```tsx
+import { GuitarList, GuitarDetail, GuitarEdit } from '@guitar/react';
+
+const TodoApp: React.FC = () => {
+  const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null);
+  
+  return (
+    <div className="todo-app">
+      <aside>
+        <GuitarList<Todo>
+          model="todo"
+          template="list-item"
+          filter={{ completed: false }}
+          orderBy="-created_at"
+          onSelect={setSelectedTodo}
+          onDelete={() => setSelectedTodo(null)}
+        />
+      </aside>
+      
+      <main>
+        {selectedTodo ? (
+          <GuitarEdit<Todo>
+            model="todo"
+            itemId={selectedTodo.id}
+            fields={['title', 'completed', 'priority']}
+            autoSave
+            onSave={(todo) => setSelectedTodo(todo)}
+          />
+        ) : (
+          <EmptyState message="Select a todo" />
+        )}
+      </main>
+    </div>
+  );
+};
+```
+
+### Using Guitar Events with React State
+
+Connect Guitar's event system to React state:
+
+```tsx
+// Hook to subscribe to Guitar model events
+const useGuitarEvent = <T,>(
+  model: string,
+  event: string,
+  handler: (data: T) => void
+) => {
+  useEffect(() => {
+    const ModelClass = GuitarRegistry.getModel(model);
+    ModelClass.on(event, handler);
+    return () => ModelClass.off(event, handler);
+  }, [model, event, handler]);
+};
+
+// Hook to get data from Guitar registry
+const useGuitarObject = <T,>(model: string, id: number | string | null): T | null => {
+  const [data, setData] = useState<T | null>(() => 
+    id ? GuitarRegistry.get(model, id) : null
+  );
+  
+  useEffect(() => {
+    if (!id) {
+      setData(null);
+      return;
+    }
+    
+    // Get initial data
+    setData(GuitarRegistry.get(model, id));
+    
+    // Subscribe to updates
+    return GuitarRegistry.subscribe(model, id, (event, newData) => {
+      if (event === 'deleted') {
+        setData(null);
+      } else {
+        setData(newData);
+      }
+    });
+  }, [model, id]);
+  
+  return data;
+};
+
+// Usage
+const TodoDetail: React.FC<{ todoId: number }> = ({ todoId }) => {
+  const todo = useGuitarObject<Todo>('todo', todoId);
+  
+  if (!todo) return <div>Loading...</div>;
+  
+  return (
+    <div>
+      <h1>{todo.title}</h1>
+      <p>Priority: {todo.priority}</p>
+    </div>
+  );
+};
+```
+
+### The Key Insight
+
+Because Custom Elements are **native browser APIs**:
+
+1. **No special integration needed** - React renders them like any HTML element
+2. **Same components everywhere** - Use `<guitar-list>` in React, Vue, Svelte, or vanilla HTML
+3. **One codebase** - Guitar team maintains one set of components, not per-framework versions
+4. **Escape hatches exist** - For complex React apps, thin wrappers provide better DX
+5. **State management optional** - Guitar's registry handles state, React can just observe
+
+This is much simpler than building separate `@guitar/react`, `@guitar/vue`, `@guitar/svelte` packages that each re-implement the same functionality.
+
+---
+
 ## Summary of Key Decisions
 
 | Topic | Decision |

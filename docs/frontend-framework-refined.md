@@ -1901,17 +1901,252 @@ const TodoDetail: React.FC<{ todoId: number }> = ({ todoId }) => {
 };
 ```
 
+### The Architecture: Custom Elements First
+
+The core Guitar views are **Custom Elements** (Web Components). They work everywhere:
+
+```html
+<!-- Works in plain HTML -->
+<guitar-list model="chart" template="card"></guitar-list>
+
+<!-- Works in React -->
+<guitar-list model="chart" template="card" />
+
+<!-- Works in Vue -->
+<guitar-list model="chart" template="card"></guitar-list>
+
+<!-- Works in Svelte -->
+<guitar-list model="chart" template="card"></guitar-list>
+```
+
+React wrappers (`<GuitarList>`) are optional convenience layers, not required.
+
+### The Tricky Part: Complex Props
+
+Custom element attributes are strings. How do we pass:
+- Objects: `widgets={{ query: CodeEditor }}`
+- Functions: `onSuccess={(chart) => navigate(...)}`
+- Components: `emptyState={<EmptyCharts />}`
+
+#### Solution 1: Property Assignment via Ref
+
+```tsx
+// React
+const DetailView = () => {
+  const ref = useRef<GuitarDetailElement>(null);
+  
+  useEffect(() => {
+    if (ref.current) {
+      // Set complex props as properties, not attributes
+      ref.current.widgets = { query: CodeEditor };
+      ref.current.onSuccess = (chart) => navigate(`/charts/${chart.id}`);
+    }
+  }, []);
+  
+  return <guitar-detail ref={ref} model="chart" item-id="123" />;
+};
+```
+
+```html
+<!-- Vanilla JS -->
+<guitar-detail id="chart-detail" model="chart" item-id="123"></guitar-detail>
+
+<script>
+  const detail = document.getElementById('chart-detail');
+  detail.widgets = { query: CodeEditor };
+  detail.onSuccess = (chart) => location.href = `/charts/${chart.id}`;
+</script>
+```
+
+#### Solution 2: Registered Configs (Recommended)
+
+Register configs by name, reference by string attribute:
+
+```typescript
+// configs.ts - register once
+Guitar.registerConfig('chart-editor', {
+  model: 'chart',
+  fields: ['name', 'chart_type', 'query', 'config'],
+  widgets: {
+    query: 'code-editor',     // Built-in widget name
+    config: 'json-editor',    // Built-in widget name
+  },
+  onSuccess: (chart) => {
+    Guitar.navigate(`/charts/${chart.id}`);
+    Guitar.toast(`Saved "${chart.name}"`);
+  },
+  onError: (error) => {
+    Guitar.toast(error.message, 'error');
+  },
+});
+
+Guitar.registerConfig('chart-detail-view', {
+  model: 'chart',
+  template: 'full',
+  selectRelated: ['dashboard'],
+});
+```
+
+```html
+<!-- Use anywhere - HTML, React, Vue, Svelte -->
+<guitar-edit config="chart-editor" item-id="123"></guitar-edit>
+<guitar-detail config="chart-detail-view" item-id="123"></guitar-detail>
+```
+
+```tsx
+// React - just as clean
+<guitar-edit config="chart-editor" item-id={chartId} />
+<guitar-detail config="chart-detail-view" item-id={chartId} />
+```
+
+#### Solution 3: Slots for Custom Content
+
+For custom widgets or empty states, use slots:
+
+```html
+<guitar-list model="chart" template="card">
+  <!-- Custom empty state via slot -->
+  <template slot="empty">
+    <div class="empty-state">
+      <img src="/no-charts.svg" />
+      <p>No charts yet</p>
+      <button onclick="createChart()">Create your first chart</button>
+    </div>
+  </template>
+  
+  <!-- Custom loading state -->
+  <template slot="loading">
+    <div class="skeleton-loader">Loading...</div>
+  </template>
+</guitar-list>
+```
+
+```tsx
+// React with slots
+<guitar-list model="chart" template="card">
+  <template slot="empty">
+    <EmptyCharts onCreate={handleCreate} />
+  </template>
+</guitar-list>
+```
+
+#### Solution 4: Custom Widget Registry
+
+For custom widgets (like `CodeEditor`), register them globally:
+
+```typescript
+// Register custom widgets
+Guitar.registerWidget('code-editor', {
+  render: (field, value, onChange) => {
+    // Return DOM element or HTML string
+    const container = document.createElement('div');
+    container.className = 'code-editor-widget';
+    
+    // Initialize your code editor (Monaco, CodeMirror, etc.)
+    const editor = monaco.editor.create(container, {
+      value: value || '',
+      language: 'sql',
+    });
+    
+    editor.onDidChangeModelContent(() => {
+      onChange(editor.getValue());
+    });
+    
+    return container;
+  },
+  
+  // Optional: cleanup
+  destroy: (container) => {
+    // Cleanup editor instance
+  },
+});
+
+// Or register a web component as a widget
+Guitar.registerWidget('my-color-picker', {
+  element: 'my-color-picker',  // Custom element tag name
+  valueAttribute: 'value',
+  changeEvent: 'color-change',
+});
+```
+
+```html
+<!-- Now use it anywhere -->
+<guitar-edit model="chart" fields="name,query" widgets='{"query": "code-editor"}'></guitar-edit>
+```
+
+### Complete Example: Chart Editor
+
+```typescript
+// setup.ts - Run once at app startup
+
+// Register widgets
+Guitar.registerWidget('code-editor', CodeEditorWidget);
+Guitar.registerWidget('json-editor', JsonEditorWidget);
+
+// Register configs
+Guitar.registerConfig('chart-full-editor', {
+  model: 'chart',
+  fields: ['name', 'chart_type', 'query', 'config', 'position'],
+  widgets: {
+    query: 'code-editor',
+    config: 'json-editor',
+    chart_type: 'select',  // Built-in
+  },
+  autoSave: true,
+  autoSaveDelay: 1500,
+  onSuccess: (chart) => {
+    Guitar.toast(`Saved "${chart.name}"`);
+  },
+});
+
+Guitar.registerConfig('chart-quick-editor', {
+  model: 'chart',
+  fields: ['name', 'chart_type'],
+  autoSave: true,
+});
+```
+
+```html
+<!-- Use in plain HTML -->
+<guitar-edit config="chart-full-editor" item-id="123"></guitar-edit>
+```
+
+```tsx
+// Use in React - identical!
+const ChartEditor: React.FC<{ chartId: number }> = ({ chartId }) => (
+  <guitar-edit config="chart-full-editor" item-id={chartId.toString()} />
+);
+```
+
+```vue
+<!-- Use in Vue - identical! -->
+<template>
+  <guitar-edit config="chart-full-editor" :item-id="chartId" />
+</template>
+```
+
+```svelte
+<!-- Use in Svelte - identical! -->
+<guitar-edit config="chart-full-editor" item-id={chartId} />
+```
+
 ### The Key Insight
 
 Because Custom Elements are **native browser APIs**:
 
-1. **No special integration needed** - React renders them like any HTML element
-2. **Same components everywhere** - Use `<guitar-list>` in React, Vue, Svelte, or vanilla HTML
-3. **One codebase** - Guitar team maintains one set of components, not per-framework versions
-4. **Escape hatches exist** - For complex React apps, thin wrappers provide better DX
-5. **State management optional** - Guitar's registry handles state, React can just observe
+1. **One implementation** - Guitar maintains `<guitar-list>`, `<guitar-detail>`, `<guitar-edit>` once
+2. **Works everywhere** - Same elements in React, Vue, Svelte, vanilla HTML, Astro, etc.
+3. **Simple things stay simple** - `<guitar-list model="todo">` just works
+4. **Complex things are possible** - Registered configs handle callbacks, custom widgets, etc.
+5. **No framework lock-in** - Switch from React to Vue? Your Guitar elements still work
+6. **No framework-specific packages** - No `@guitar/react`, `@guitar/vue` to maintain
 
-This is much simpler than building separate `@guitar/react`, `@guitar/vue`, `@guitar/svelte` packages that each re-implement the same functionality.
+The React wrappers (`<GuitarList>`) become truly optional - just for people who want:
+- TypeScript prop types in JSX
+- Automatic ref handling for callbacks
+- React-style event props (`onSelect` vs `addEventListener`)
+
+But even without wrappers, the raw custom elements work great in React.
 
 ---
 
@@ -1922,15 +2157,82 @@ This is much simpler than building separate `@guitar/react`, `@guitar/vue`, `@gu
 | **Rendering** | Backend returns `_renders.{template}` field with pre-rendered HTML |
 | **Client-side fallback** | Nunjucks (Django-compatible) for client-side rendering |
 | **Template files** | Plain `.html` files + optional `.ts` for interactivity |
-| **Views** | Custom elements: `<guitar-list>`, `<guitar-detail>`, `<guitar-edit>` |
-| **Config passing** | Named configs + property assignment + attribute overrides |
+| **Views** | Custom Elements: `<guitar-list>`, `<guitar-detail>`, `<guitar-edit>` |
+| **Framework integration** | Custom Elements work natively in React/Vue/Svelte/vanilla |
+| **Complex props** | Registered configs (`Guitar.registerConfig('name', {...})`) |
+| **Custom widgets** | Registered widgets (`Guitar.registerWidget('code-editor', {...})`) |
 | **Events** | Model events with `Chart.on('updated', ...)` pattern |
 | **Object sync** | Central `GuitarRegistry` with reactive updates |
 | **Search/filter** | Push pattern (input targets list) as primary |
+
+### The Core Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Guitar Custom Elements                        │
+│         <guitar-list>  <guitar-detail>  <guitar-edit>           │
+│                   (Web Components / Native)                      │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+              Works natively in all frameworks
+                              │
+        ┌─────────────┬───────┴───────┬─────────────┐
+        ▼             ▼               ▼             ▼
+   ┌─────────┐  ┌──────────┐   ┌──────────┐  ┌──────────┐
+   │  React  │  │   Vue    │   │  Svelte  │  │  Vanilla │
+   └─────────┘  └──────────┘   └──────────┘  └──────────┘
+        │
+        ▼ (optional)
+   ┌─────────────────────┐
+   │  React Wrappers     │
+   │  <GuitarList>       │
+   │  (convenience only) │
+   └─────────────────────┘
+```
 
 This gives Django developers:
 - **Familiar templates** (Django/Jinja2 syntax works everywhere)
 - **Declarative views** (Custom elements like Django CBVs)
 - **Minimal JavaScript** (Most behavior in HTML attributes)
 - **Automatic sync** (Edit anywhere, updates everywhere)
+- **Framework freedom** (Same code works in React, Vue, Svelte, or vanilla)
 - **Escape hatches** (TypeScript when needed for complex logic)
+
+### Quick Reference
+
+```html
+<!-- Basic list -->
+<guitar-list model="todo" template="card"></guitar-list>
+
+<!-- With filters and ordering -->
+<guitar-list 
+  model="todo" 
+  template="list-item"
+  filter='{"completed": false}'
+  order-by="-priority,-created_at"
+  paginate-by="20"
+></guitar-list>
+
+<!-- Detail view -->
+<guitar-detail model="todo" item-id="123" template="full"></guitar-detail>
+
+<!-- Edit with auto-save -->
+<guitar-edit model="todo" item-id="123" auto-save></guitar-edit>
+
+<!-- Using a registered config -->
+<guitar-edit config="todo-full-editor" item-id="123"></guitar-edit>
+
+<!-- Create new (no item-id) -->
+<guitar-edit model="todo" config="todo-quick-create"></guitar-edit>
+```
+
+```typescript
+// Setup (run once)
+Guitar.registerConfig('todo-full-editor', {
+  model: 'todo',
+  fields: ['title', 'priority', 'due_date', 'notes'],
+  widgets: { notes: 'rich-text', due_date: 'date-picker' },
+  autoSave: true,
+  onSuccess: (todo) => Guitar.toast(`Saved "${todo.title}"`),
+});
+```

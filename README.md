@@ -111,6 +111,47 @@ const charts = await Chart.objects
 - [Permission Patterns](https://davefowler.github.io/django-guitar/permission-patterns/) - Common permission scenarios
 - [TypeScript Client](https://davefowler.github.io/django-guitar/typescript-client/) - Frontend usage guide
 
+## Limitations / Not Yet
+
+Django Guitar is in **beta** (v0.1.0). Here's what works and what's coming:
+
+### ✅ What Works
+
+- **Basic CRUD** - Create, read, update, delete operations
+- **Filtering** - Field lookups (`__icontains`, `__gte`, `__in`, etc.)
+- **Ordering** - Single and multi-field ordering
+- **Pagination** - Limit/offset pagination
+- **Field selection** - `only()` and `defer()` for field selection
+- **Model-Level Security** - Full permission system with `filter_read`, `filter_write`, `filter_delete`
+- **Lifecycle hooks** - `pre_create`, `post_create`, `pre_update`, `post_update`, etc.
+- **TypeScript generation** - Auto-generated types and client
+
+### 🚧 Coming Soon
+
+- **Relationship expansion** - `select_related()` and `prefetch_related()` are partially implemented (client-side only)
+- **Bulk operations** - `bulk_create()`, `bulk_update()`, bulk delete
+- **Custom QuerySet methods** - Expose custom manager methods to frontend
+- **Efficient `count()`** - Currently fetches all results; will add server-side count endpoint
+- **Proper `exclude()`** - Currently uses filter; will add true exclude support
+- **Nested writes** - Create/update related objects in a single request
+- **Aggregations** - `Sum()`, `Avg()`, `Count()`, etc.
+- **Search** - Full-text search across multiple fields
+- **Cursor pagination** - More efficient pagination for large datasets
+
+### ⚠️ Known Limitations
+
+- **Migrations** - Django Guitar doesn't handle migrations (use Django's migration system)
+- **Complex joins** - Deeply nested relationships may not work optimally
+- **Performance** - No built-in caching or rate limiting (add at Django/Nginx level)
+- **Authentication** - Uses Django's session/auth system; doesn't provide auth itself
+- **File uploads** - FileField/ImageField not yet supported (use separate upload endpoints)
+
+### 📝 Field Lookups Supported
+
+Currently supported lookups: `exact`, `iexact`, `contains`, `icontains`, `startswith`, `istartswith`, `endswith`, `iendswith`, `gt`, `gte`, `lt`, `lte`, `in`, `isnull`, `year`, `month`, `day`, `week_day`, `hour`, `minute`, `second`, `range`, `regex`, `iregex`.
+
+Not yet supported: `date`, `time`, `week`, `quarter`, `iso_year`, and some advanced lookups.
+
 ## How It Works
 
 ```

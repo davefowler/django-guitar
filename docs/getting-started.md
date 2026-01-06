@@ -38,17 +38,16 @@ Add `GuitarModel` to any Django model:
 ```python
 # models.py
 from django.db import models
+from django.utils import timezone
 from guitar import GuitarModel
 
-class Chart(GuitarModel, models.Model):
-    name = models.CharField(max_length=255)
-    data = models.JSONField()
-    created_at = models.DateTimeField(auto_now_add=True)
-    user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
+class Question(GuitarModel, models.Model):
+    question_text = models.CharField(max_length=200)
+    pub_date = models.DateTimeField('date published')
     
     class GuitarMeta:
-        fields = ['id', 'name', 'data', 'created_at', 'user_id']
-        writable_fields = ['name', 'data']
+        fields = ['id', 'question_text', 'pub_date']
+        writable_fields = ['question_text', 'pub_date']
 ```
 
 That's it! Your model now has a full REST API.
@@ -66,34 +65,34 @@ frontend/src/guitar/
 ├── index.ts
 ├── client.ts
 └── models/
-    └── Chart.ts
+    └── Question.ts
 ```
 
 ## Use It in Your Frontend
 
 ```typescript
-import { Chart } from './guitar';
+import { Question } from './guitar';
 
-// List all charts
-const charts = await Chart.objects.all();
+// List all questions
+const questions = await Question.objects.all();
 
-// Filter charts
-const myCharts = await Chart.objects.filter({ user_id: 5 });
+// Filter questions
+const recentQuestions = await Question.objects.filter({ pub_date__year: 2024 });
 
-// Get a single chart
-const chart = await Chart.objects.get({ id: 1 });
+// Get a single question
+const question = await Question.objects.get({ id: 1 });
 
-// Create a chart
-const newChart = await Chart.objects.create({
-  name: 'Sales Q4',
-  data: { labels: ['Jan', 'Feb'], values: [100, 200] }
+// Create a question
+const newQuestion = await Question.objects.create({
+  question_text: 'What is your favorite programming language?',
+  pub_date: new Date()
 });
 
-// Update a chart
-await Chart.objects.filter({ id: 1 }).update({ name: 'Updated Name' });
+// Update a question
+await Question.objects.filter({ id: 1 }).update({ question_text: 'Updated Question' });
 
-// Delete a chart
-await Chart.objects.filter({ id: 1 }).delete();
+// Delete a question
+await Question.objects.filter({ id: 1 }).delete();
 ```
 
 It works just like Django's ORM!
@@ -107,32 +106,34 @@ Django Guitar uses **Model-Level Security** - permissions defined once, on your 
 Add a `GuitarManager` to control access:
 
 ```python
-class Chart(GuitarModel, models.Model):
-    # ... fields ...
+class Question(GuitarModel, models.Model):
+    question_text = models.CharField(max_length=200)
+    pub_date = models.DateTimeField('date published')
     
     class GuitarMeta:
-        fields = ['id', 'name', 'data', 'created_at', 'user_id']
-        writable_fields = ['name', 'data']
+        fields = ['id', 'question_text', 'pub_date']
+        writable_fields = ['question_text', 'pub_date']
     
     class GuitarManager:
         def filter_read(self, request, queryset):
-            """Users can only see their own charts."""
-            return queryset.filter(user=request.user)
+            """Users can only see published questions."""
+            return queryset.filter(pub_date__lte=timezone.now())
         
         def filter_write(self, request, queryset):
-            """Users can only edit their own charts."""
-            return queryset.filter(user=request.user)
+            """Users can only edit unpublished questions."""
+            return queryset.filter(pub_date__gte=timezone.now())
         
         def check_create(self, request, data):
-            """Set the user automatically on create."""
-            data['user'] = request.user
+            """Set pub_date to future if not provided."""
+            if 'pub_date' not in data:
+                data['pub_date'] = timezone.now()
             return data
 ```
 
 Now:
-- Users only see their own charts
-- Users can only edit their own charts
-- New charts are automatically assigned to the current user
+- Users only see published questions
+- Users can only edit unpublished questions
+- New questions default to current time
 
 ---
 
@@ -141,31 +142,37 @@ Now:
 Just like Django, you can chain query methods:
 
 ```typescript
-const charts = await Chart.objects
-  .filter({ user_id: 5 })
-  .exclude({ archived: true })
-  .order_by('-created_at')
+const questions = await Question.objects
+  .filter({ pub_date__year: 2024 })
+  .exclude({ pub_date__lt: '2024-01-01' })
+  .order_by('-pub_date')
   .limit(10);
 ```
 
 ## Including Related Objects
 
 ```python
-class Chart(GuitarModel, models.Model):
-    dashboard = models.ForeignKey(Dashboard, on_delete=models.CASCADE)
+class Choice(GuitarModel, models.Model):
+    question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='choices')
+    choice_text = models.CharField(max_length=200)
+    votes = models.IntegerField(default=0)
     
     class GuitarMeta:
-        fields = ['id', 'name', 'dashboard_id']
+        fields = ['id', 'choice_text', 'votes', 'question_id']
 ```
 
 ```typescript
 // By default, just the ID
-const chart = await Chart.objects.get({ id: 1 });
-chart.dashboard_id  // 5
+const choice = await Choice.objects.get({ id: 1 });
+choice.question_id  // 5
 
 // Include the full object
-const chart = await Chart.objects.get({ id: 1 }).select_related('dashboard');
-chart.dashboard  // { id: 5, name: 'Sales Dashboard', ... }
+const choice = await Choice.objects.get({ id: 1 }).select_related('question');
+choice.question  // { id: 5, question_text: 'What is...', ... }
+
+// Include reverse relation
+const question = await Question.objects.get({ id: 1 }).prefetch_related('choices');
+question.choices  // [{ id: 1, choice_text: 'Python', ... }, ...]
 ```
 
 ---

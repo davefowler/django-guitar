@@ -273,6 +273,7 @@ export abstract class GuitarManager<
   protected abstract endpoint: string;
   
   private _filters: Record<string, unknown> = {{}};
+  private _exclude?: Record<string, unknown>;
   private _ordering: string[] = [];
   private _limit?: number;
   private _offset?: number;
@@ -284,6 +285,7 @@ export abstract class GuitarManager<
     const cloned = Object.create(Object.getPrototypeOf(this));
     cloned.endpoint = this.endpoint;
     cloned._filters = {{ ...this._filters }};
+    cloned._exclude = this._exclude ? {{ ...this._exclude }} : undefined;
     cloned._ordering = [...this._ordering];
     cloned._limit = this._limit;
     cloned._offset = this._offset;
@@ -300,8 +302,13 @@ export abstract class GuitarManager<
   }}
   
   exclude(lookup: Partial<TFilter>): this {{
-    // For now, just use filter - proper exclude would need backend support
-    return this.filter(lookup);
+    const cloned = this._clone();
+    // Store exclude filters separately
+    if (!cloned._exclude) {{
+      cloned._exclude = {{}};
+    }}
+    cloned._exclude = {{ ...cloned._exclude, ...lookup }};
+    return cloned;
   }}
   
   order_by(...fields: string[]): this {{
@@ -365,6 +372,14 @@ export abstract class GuitarManager<
     if (this._expand) {{
       params._expand = this._expand.join(',');
     }}
+    if (this._exclude) {{
+      // Convert exclude filters to comma-separated field=value format
+      const excludeParts: string[] = [];
+      for (const [key, value] of Object.entries(this._exclude)) {{
+        excludeParts.push(`${{key}}=${{value}}`);
+      }}
+      params._exclude = excludeParts.join(',');
+    }}
     
     return params;
   }}
@@ -403,8 +418,8 @@ export abstract class GuitarManager<
   }}
   
   async count(): Promise<number> {{
-    const results = await this.all();
-    return results.length;
+    const queryString = buildQueryString(this._buildQueryParams());
+    return guitarFetch<number>(`${{this.endpoint}}/_count/${{queryString}}`);
   }}
   
   async exists(): Promise<boolean> {{
@@ -444,6 +459,21 @@ export abstract class GuitarManager<
         method: 'DELETE',
       }});
     }}
+  }}
+  
+  async bulk_create(data: TCreate[]): Promise<TRead[]> {{
+    return guitarFetch<TRead[]>(`${{this.endpoint}}/_bulk/`, {{
+      method: 'POST',
+      body: JSON.stringify(data),
+    }});
+  }}
+  
+  async bulk_update(data: TUpdate): Promise<TRead[]> {{
+    const queryString = buildQueryString(this._buildQueryParams());
+    return guitarFetch<TRead[]>(`${{this.endpoint}}/_bulk/${{queryString}}`, {{
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }});
   }}
 }}
 '''

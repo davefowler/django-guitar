@@ -1,0 +1,174 @@
+.question-detail {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.back-button {
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  color: #333;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  margin-bottom: 2rem;
+  transition: all 0.2s;
+}
+
+.back-button:hover {
+  background: #e8e8e8;
+  border-color: #ccc;
+}
+
+.question-header {
+  background: white;
+  border-radius: 8px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.question-header h1 {
+  margin: 0 0 1rem 0;
+  color: #333;
+  font-size: 2rem;
+  line-height: 1.3;
+}
+
+.question-meta {
+  color: #666;
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.vote-count {
+  color: #667eea;
+  font-weight: 500;
+}
+
+.choices-section {
+  background: white;
+  border-radius: 8px;
+  padding: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.choices-section h2 {
+  margin: 0 0 1.5rem 0;
+  color: #333;
+  font-size: 1.5rem;
+}
+
+.empty-choices {
+  text-align: center;
+  padding: 2rem;
+  color: #666;
+}
+
+.choices-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.choice-item {
+  border: 2px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 1.5rem;
+  transition: all 0.2s;
+}
+
+.choice-item:hover {
+  border-color: #667eea;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+}
+
+.choice-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.choice-text {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.choice-votes {
+  color: #667eea;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.choice-bar-container {
+  height: 8px;
+  background: #f0f0f0;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+  overflow: hidden;
+}
+
+.choice-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  transition: width 0.3s ease;
+}
+
+.choice-percentage {
+  color: #666;
+  font-size: 0.85rem;
+  margin-bottom: 0.75rem;
+}
+
+.vote-button {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.vote-button:hover {
+  background: #5568d3;
+}
+
+.loading {
+  text-align: center;
+  padding: 3rem;
+  color: #666;
+  font-size: 1.1rem;
+}
+
+.error-message {
+  background: #fee;
+  border: 1px solid #fcc;
+  color: #c33;
+  padding: 1.5rem;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.error-message p {
+  margin: 0 0 1rem 0;
+}
+
+.error-message button {
+  background: #c33;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.error-message button:hover {
+  background: #a22;
+}
+

@@ -15,7 +15,7 @@ python manage.py generate_guitar_client --output ./frontend/src/guitar/
 ### Import Models
 
 ```typescript
-import { Chart, Dashboard, User } from './guitar';
+import { Question, Choice, User } from './guitar';
 ```
 
 ---
@@ -25,49 +25,49 @@ import { Chart, Dashboard, User } from './guitar';
 ### Create
 
 ```typescript
-const chart = await Chart.objects.create({
+const question = await Question.objects.create({
   name: 'Sales Q4',
   data: { values: [100, 200, 300] },
   dashboard_id: 1
 });
 
-console.log(chart.id);  // Auto-assigned ID
+console.log(question.id);  // Auto-assigned ID
 ```
 
 ### Read
 
 ```typescript
 // Get all
-const charts = await Chart.objects.all();
+const questions = await Question.objects.all();
 
 // Get by ID
-const chart = await Chart.objects.get({ id: 1 });
+const question = await Question.objects.get({ id: 1 });
 
 // Filter
-const myCharts = await Chart.objects.filter({ user_id: 5 });
+const myQuestions = await Question.objects.filter({ user_id: 5 });
 
 // First match (or null)
-const chart = await Chart.objects.filter({ name: 'Sales' }).first();
+const question = await Question.objects.filter({ name: 'Sales' }).first();
 ```
 
 ### Update
 
 ```typescript
 // Update single
-await Chart.objects.filter({ id: 1 }).update({ name: 'New Name' });
+await Question.objects.filter({ id: 1 }).update({ name: 'New Name' });
 
 // Update multiple
-await Chart.objects.filter({ archived: false }).update({ archived: true });
+await Question.objects.filter({ archived: false }).update({ archived: true });
 ```
 
 ### Delete
 
 ```typescript
 // Delete single
-await Chart.objects.filter({ id: 1 }).delete();
+await Question.objects.filter({ id: 1 }).delete();
 
 // Delete multiple
-await Chart.objects.filter({ archived: true }).delete();
+await Question.objects.filter({ archived: true }).delete();
 ```
 
 ---
@@ -78,46 +78,46 @@ await Chart.objects.filter({ archived: true }).delete();
 
 ```typescript
 // Exact match
-Chart.objects.filter({ user_id: 5 })
+Question.objects.filter({ user_id: 5 })
 
 // Multiple conditions (AND)
-Chart.objects.filter({ user_id: 5, archived: false })
+Question.objects.filter({ user_id: 5, archived: false })
 ```
 
 ### Lookups
 
 ```typescript
 // Comparison
-Chart.objects.filter({ views__gt: 100 })       // views > 100
-Chart.objects.filter({ views__gte: 100 })      // views >= 100
-Chart.objects.filter({ views__lt: 100 })       // views < 100
-Chart.objects.filter({ views__lte: 100 })      // views <= 100
+Question.objects.filter({ views__gt: 100 })       // views > 100
+Question.objects.filter({ views__gte: 100 })      // views >= 100
+Question.objects.filter({ views__lt: 100 })       // views < 100
+Question.objects.filter({ views__lte: 100 })      // views <= 100
 
 // Text search
-Chart.objects.filter({ name__contains: 'Sales' })      // Case-sensitive
-Chart.objects.filter({ name__icontains: 'sales' })     // Case-insensitive
-Chart.objects.filter({ name__startswith: 'Q4' })
-Chart.objects.filter({ name__endswith: 'Report' })
+Question.objects.filter({ name__contains: 'Sales' })      // Case-sensitive
+Question.objects.filter({ name__icontains: 'sales' })     // Case-insensitive
+Question.objects.filter({ name__startswith: 'Q4' })
+Question.objects.filter({ name__endswith: 'Report' })
 
 // List membership
-Chart.objects.filter({ status__in: ['draft', 'review'] })
+Question.objects.filter({ status__in: ['draft', 'review'] })
 
 // Null checks
-Chart.objects.filter({ deleted_at__isnull: true })
+Question.objects.filter({ deleted_at__isnull: true })
 
 // Date filters
-Chart.objects.filter({ created_at__year: 2024 })
-Chart.objects.filter({ created_at__gte: '2024-01-01' })
+Question.objects.filter({ created_at__year: 2024 })
+Question.objects.filter({ created_at__gte: '2024-01-01' })
 ```
 
 ### Exclude
 
 ```typescript
 // Exclude (opposite of filter)
-Chart.objects.exclude({ archived: true })
+Question.objects.exclude({ archived: true })
 
 // Combine filter and exclude
-Chart.objects
+Question.objects
   .filter({ user_id: 5 })
   .exclude({ status: 'draft' })
 ```
@@ -126,10 +126,10 @@ Chart.objects
 
 ```typescript
 // Filter by related object's field
-Chart.objects.filter({ dashboard__name: 'Sales' })
+Question.objects.filter({ dashboard__name: 'Sales' })
 
 // Multiple levels deep
-Chart.objects.filter({ dashboard__owner__email: 'alice@example.com' })
+Question.objects.filter({ dashboard__owner__email: 'alice@example.com' })
 ```
 
 ---
@@ -138,13 +138,13 @@ Chart.objects.filter({ dashboard__owner__email: 'alice@example.com' })
 
 ```typescript
 // Ascending
-Chart.objects.order_by('name')
+Question.objects.order_by('name')
 
 // Descending (prefix with -)
-Chart.objects.order_by('-created_at')
+Question.objects.order_by('-created_at')
 
 // Multiple fields
-Chart.objects.order_by('-created_at', 'name')
+Question.objects.order_by('-created_at', 'name')
 ```
 
 ---
@@ -155,21 +155,21 @@ Chart.objects.order_by('-created_at', 'name')
 
 ```typescript
 // First 10
-Chart.objects.limit(10)
+Question.objects.limit(10)
 
 // Skip first 20, take 10
-Chart.objects.limit(10).offset(20)
+Question.objects.limit(10).offset(20)
 ```
 
 ### Cursor-Based
 
 ```typescript
 // First page
-const page1 = await Chart.objects.order_by('-created_at').limit(10);
+const page1 = await Question.objects.order_by('-created_at').limit(10);
 // Returns: { results: [...], next_cursor: 'abc123', has_more: true }
 
 // Next page
-const page2 = await Chart.objects
+const page2 = await Question.objects
   .order_by('-created_at')
   .after(page1.next_cursor)
   .limit(10);
@@ -183,17 +183,17 @@ const page2 = await Chart.objects
 
 ```typescript
 // Only fetch specific fields
-const charts = await Chart.objects.only('id', 'name');
-// charts[0].id    ✓
-// charts[0].name  ✓
-// charts[0].data  undefined
+const questions = await Question.objects.only('id', 'name');
+// questions[0].id    ✓
+// questions[0].name  ✓
+// questions[0].data  undefined
 ```
 
 ### Defer (Exclude)
 
 ```typescript
 // Fetch all except large fields
-const charts = await Chart.objects.defer('large_blob', 'raw_data');
+const questions = await Question.objects.defer('large_blob', 'raw_data');
 ```
 
 ---
@@ -205,41 +205,41 @@ const charts = await Chart.objects.defer('large_blob', 'raw_data');
 By default, foreign keys return just the ID:
 
 ```typescript
-const chart = await Chart.objects.get({ id: 1 });
-chart.dashboard_id  // 5 (just the ID)
-chart.dashboard     // undefined
+const question = await Question.objects.get({ id: 1 });
+question.dashboard_id  // 5 (just the ID)
+question.dashboard     // undefined
 ```
 
 Use `select_related` to include the full object:
 
 ```typescript
-const chart = await Chart.objects
+const question = await Question.objects
   .get({ id: 1 })
   .select_related('dashboard');
 
-chart.dashboard_id  // 5
-chart.dashboard     // { id: 5, name: 'Sales Dashboard', ... }
+question.dashboard_id  // 5
+question.dashboard     // { id: 5, name: 'Sales Choice', ... }
 ```
 
 ### Multiple Relations
 
 ```typescript
-const chart = await Chart.objects
+const question = await Question.objects
   .get({ id: 1 })
   .select_related('dashboard', 'created_by');
 
-chart.dashboard   // Dashboard object
-chart.created_by  // User object
+question.dashboard   // Choice object
+question.created_by  // User object
 ```
 
 ### Nested Relations
 
 ```typescript
-const chart = await Chart.objects
+const question = await Question.objects
   .get({ id: 1 })
   .select_related('dashboard.owner');
 
-chart.dashboard.owner  // User object
+question.dashboard.owner  // User object
 ```
 
 ### Reverse Relations (prefetch_related)
@@ -247,11 +247,11 @@ chart.dashboard.owner  // User object
 For many-to-many or reverse foreign keys:
 
 ```typescript
-const dashboard = await Dashboard.objects
+const dashboard = await Choice.objects
   .get({ id: 1 })
-  .prefetch_related('charts', 'members');
+  .prefetch_related('questions', 'members');
 
-dashboard.charts   // Chart[]
+dashboard.questions   // Question[]
 dashboard.members  // User[]
 ```
 
@@ -261,14 +261,14 @@ dashboard.members  // User[]
 
 ```typescript
 // Count
-const count = await Chart.objects.filter({ user_id: 5 }).count();
+const count = await Question.objects.filter({ user_id: 5 }).count();
 
 // Exists
-const hasCharts = await Chart.objects.filter({ user_id: 5 }).exists();
+const hasQuestions = await Question.objects.filter({ user_id: 5 }).exists();
 
 // First / Last
-const newest = await Chart.objects.order_by('-created_at').first();
-const oldest = await Chart.objects.order_by('created_at').first();
+const newest = await Question.objects.order_by('-created_at').first();
+const oldest = await Question.objects.order_by('created_at').first();
 ```
 
 ---
@@ -279,15 +279,15 @@ If your Django model exposes custom QuerySet methods:
 
 ```python
 # Django
-class ChartQuerySet(models.QuerySet):
+class QuestionQuerySet(models.QuerySet):
     def active(self):
         return self.filter(archived=False)
     
     def trending(self, days=7):
         return self.filter(created_at__gte=...).order_by('-views')
 
-class Chart(GuitarModel):
-    objects = ChartQuerySet.as_manager()
+class Question(GuitarModel):
+    objects = QuestionQuerySet.as_manager()
     
     class GuitarMeta:
         custom_methods = ['active', 'trending']
@@ -295,10 +295,10 @@ class Chart(GuitarModel):
 
 ```typescript
 // TypeScript
-const charts = await Chart.objects.active().trending(30);
+const questions = await Question.objects.active().trending(30);
 
 // Chain with built-in methods
-const charts = await Chart.objects
+const questions = await Question.objects
   .active()
   .trending(7)
   .select_related('dashboard')
@@ -311,10 +311,10 @@ const charts = await Chart.objects
 
 ```typescript
 try {
-  const chart = await Chart.objects.get({ id: 999 });
+  const question = await Question.objects.get({ id: 999 });
 } catch (error) {
   if (error.status === 404) {
-    console.log('Chart not found');
+    console.log('Question not found');
   } else if (error.status === 403) {
     console.log('Permission denied');
   } else if (error.status === 401) {
@@ -329,7 +329,7 @@ try {
 import { NotFoundError, PermissionDeniedError, ValidationError } from './guitar';
 
 try {
-  await Chart.objects.create({ name: '' });
+  await Question.objects.create({ name: '' });
 } catch (error) {
   if (error instanceof ValidationError) {
     console.log(error.fields);  // { name: ['This field is required.'] }
@@ -345,7 +345,7 @@ try {
 
 ```typescript
 // Read type (all fields)
-interface Chart {
+interface Question {
   id: number;
   name: string;
   data: Record<string, unknown>;
@@ -354,13 +354,13 @@ interface Chart {
 }
 
 // Create type (writable fields, required)
-interface ChartCreate {
+interface QuestionCreate {
   name: string;
   data: Record<string, unknown>;
 }
 
 // Update type (writable fields, optional)
-interface ChartUpdate {
+interface QuestionUpdate {
   name?: string;
   data?: Record<string, unknown>;
 }
@@ -370,11 +370,11 @@ interface ChartUpdate {
 
 ```typescript
 // When using select_related, type expands
-const chart = await Chart.objects
+const question = await Question.objects
   .get({ id: 1 })
   .select_related('dashboard');
 
-// chart is typed as Chart & { dashboard: Dashboard | null }
+// question is typed as Question & { dashboard: Choice | null }
 ```
 
 ---
@@ -433,17 +433,17 @@ configure({
 
 ```typescript
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { Chart } from './guitar';
+import { Question } from './guitar';
 
-function ChartList() {
-  const { data: charts, isLoading } = useQuery({
-    queryKey: ['charts'],
-    queryFn: () => Chart.objects.filter({ user_id: userId }),
+function QuestionList() {
+  const { data: questions, isLoading } = useQuery({
+    queryKey: ['questions'],
+    queryFn: () => Question.objects.filter({ user_id: userId }),
   });
   
-  const createChart = useMutation({
-    mutationFn: (data: ChartCreate) => Chart.objects.create(data),
-    onSuccess: () => queryClient.invalidateQueries(['charts']),
+  const createQuestion = useMutation({
+    mutationFn: (data: QuestionCreate) => Question.objects.create(data),
+    onSuccess: () => queryClient.invalidateQueries(['questions']),
   });
   
   // ...
@@ -454,12 +454,12 @@ function ChartList() {
 
 ```typescript
 import useSWR from 'swr';
-import { Chart } from './guitar';
+import { Question } from './guitar';
 
-function ChartList() {
-  const { data: charts, error } = useSWR(
-    ['charts', userId],
-    () => Chart.objects.filter({ user_id: userId })
+function QuestionList() {
+  const { data: questions, error } = useSWR(
+    ['questions', userId],
+    () => Question.objects.filter({ user_id: userId })
   );
   
   // ...

@@ -13,16 +13,17 @@ MLS centralizes your permissions on the model - define once, enforce everywhere.
 Users can only see and edit their own records:
 
 ```python
-class Chart(GuitarModel, models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    name = models.CharField(max_length=255)
+class Question(GuitarModel, models.Model):
+    question_text = models.CharField(max_length=200)
+    pub_date = models.DateTimeField('date published')
     
     class GuitarManager:
         def filter_read(self, request, queryset):
-            return queryset.filter(user=request.user)
+            return queryset.filter(pub_date__lte=timezone.now())
         
         def check_create(self, request, data):
-            data['user'] = request.user
+            if 'pub_date' not in data:
+                data['pub_date'] = timezone.now()
             return data
 ```
 
@@ -31,19 +32,20 @@ class Chart(GuitarModel, models.Model):
 Users see their own records plus public ones:
 
 ```python
-class Chart(GuitarModel, models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    is_public = models.BooleanField(default=False)
+class Question(GuitarModel, models.Model):
+    question_text = models.CharField(max_length=200)
+    pub_date = models.DateTimeField('date published')
+    is_featured = models.BooleanField(default=False)
     
     class GuitarManager:
         def filter_read(self, request, queryset):
             return queryset.filter(
-                Q(user=request.user) | Q(is_public=True)
+                Q(pub_date__lte=timezone.now()) | Q(is_featured=True)
             )
         
         def filter_write(self, request, queryset):
-            # Can only edit own charts (not public ones from others)
-            return queryset.filter(user=request.user)
+            # Can only edit unpublished questions
+            return queryset.filter(pub_date__gte=timezone.now())
 ```
 
 ### Admin Can See All
@@ -55,7 +57,7 @@ class GuitarManager:
     def filter_read(self, request, queryset):
         if request.user.is_staff:
             return queryset
-        return queryset.filter(user=request.user)
+        return queryset.filter(pub_date__lte=timezone.now())
 ```
 
 ---
@@ -93,17 +95,17 @@ class Project(GuitarModel, models.Model):
 More flexible - roles stored in a membership table:
 
 ```python
-class DashboardMembership(models.Model):
+class PollMembership(models.Model):
     ROLES = [('viewer', 'Viewer'), ('editor', 'Editor'), ('owner', 'Owner')]
     
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    dashboard = models.ForeignKey('Dashboard', on_delete=models.CASCADE)
+    poll = models.ForeignKey('Poll', on_delete=models.CASCADE)
     role = models.CharField(max_length=20, choices=ROLES)
 
 
-class Dashboard(GuitarModel, models.Model):
-    name = models.CharField(max_length=255)
-    members = models.ManyToManyField(User, through=DashboardMembership)
+class Poll(GuitarModel, models.Model):
+    title = models.CharField(max_length=255)
+    members = models.ManyToManyField(User, through=PollMembership)
     
     class GuitarManager:
         def filter_read(self, request, queryset):
@@ -111,14 +113,14 @@ class Dashboard(GuitarModel, models.Model):
         
         def filter_write(self, request, queryset):
             return queryset.filter(
-                dashboardmembership__user=request.user,
-                dashboardmembership__role__in=['editor', 'owner']
+                pollmembership__user=request.user,
+                pollmembership__role__in=['editor', 'owner']
             )
         
         def filter_delete(self, request, queryset):
             return queryset.filter(
-                dashboardmembership__user=request.user,
-                dashboardmembership__role='owner'
+                pollmembership__user=request.user,
+                pollmembership__role='owner'
             )
 ```
 
@@ -128,35 +130,34 @@ class Dashboard(GuitarModel, models.Model):
 
 ### Access Through Parent
 
-Charts inherit access from their dashboard:
+Choices inherit access from their question:
 
 ```python
-class Chart(GuitarModel, models.Model):
-    dashboard = models.ForeignKey(Dashboard, on_delete=models.CASCADE)
-    name = models.CharField(max_length=255)
+class Choice(GuitarModel, models.Model):
+    question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='choices')
+    choice_text = models.CharField(max_length=200)
+    votes = models.IntegerField(default=0)
     
     class GuitarManager:
         def filter_read(self, request, queryset):
-            # User can see charts if they can see the dashboard
-            return queryset.filter(dashboard__members=request.user)
+            # User can see choices if they can see the question
+            return queryset.filter(question__pub_date__lte=timezone.now())
         
         def filter_write(self, request, queryset):
             return queryset.filter(
-                dashboard__dashboardmembership__user=request.user,
-                dashboard__dashboardmembership__role__in=['editor', 'owner']
+                question__pub_date__gte=timezone.now()
             )
         
         def check_create(self, request, data):
-            # Verify user has edit access to the dashboard
-            dashboard_id = data.get('dashboard_id')
-            has_access = DashboardMembership.objects.filter(
-                user=request.user,
-                dashboard_id=dashboard_id,
-                role__in=['editor', 'owner']
-            ).exists()
+            # Verify question is unpublished (can add choices)
+            question_id = data.get('question_id')
+            question = Question.objects.filter(
+                id=question_id,
+                pub_date__gte=timezone.now()
+            ).first()
             
-            if not has_access:
-                raise PermissionDenied("Cannot add charts to this dashboard")
+            if not question:
+                raise PermissionDenied("Cannot add choices to published questions")
             
             return data
 ```
@@ -254,7 +255,7 @@ class GuitarMeta:
         # Only allow deleting single objects
         if queryset.count() > 1:
             raise PermissionDenied("Bulk delete not allowed")
-        return queryset.filter(user=request.user)
+        return queryset.filter(pub_date__lte=timezone.now())
 ```
 
 ---
@@ -282,9 +283,9 @@ from myapp.features import is_feature_enabled
 
 class GuitarManager:
     def filter_read(self, request, queryset):
-        if not is_feature_enabled('advanced_charts', request.user):
-            queryset = queryset.exclude(chart_type__in=['advanced', 'premium'])
-        return queryset.filter(user=request.user)
+        if not is_feature_enabled('advanced_polls', request.user):
+            queryset = queryset.exclude(question_type__in=['advanced', 'premium'])
+        return queryset.filter(pub_date__lte=timezone.now())
 ```
 
 ### Soft Delete
@@ -299,13 +300,13 @@ class SoftDeleteQuerySet(models.QuerySet):
     def active(self):
         return self.filter(deleted_at__isnull=True)
 
-class Chart(GuitarModel, models.Model):
+class Question(GuitarModel, models.Model):
     deleted_at = models.DateTimeField(null=True, blank=True)
     objects = SoftDeleteQuerySet.as_manager()
     
     class GuitarManager:
         def filter_read(self, request, queryset):
-            return queryset.active().filter(user=request.user)
+            return queryset.active().filter(pub_date__lte=timezone.now())
 ```
 
 ---
@@ -380,30 +381,30 @@ class Article(GuitarModel, models.Model):
 from django.test import TestCase
 from guitar.test import GuitarTestMixin
 
-class ChartPermissionTests(GuitarTestMixin, TestCase):
+class QuestionPermissionTests(GuitarTestMixin, TestCase):
     def setUp(self):
         self.user1 = User.objects.create_user('user1')
         self.user2 = User.objects.create_user('user2')
-        self.chart = Chart.objects.create(name='Test', user=self.user1)
+        self.question = Question.objects.create(name='Test', user=self.user1)
     
     def test_owner_can_read(self):
         self.client.force_login(self.user1)
-        response = self.guitar_get(Chart, self.chart.id)
+        response = self.guitar_get(Question, self.question.id)
         self.assertEqual(response.status_code, 200)
     
     def test_non_owner_cannot_read(self):
         self.client.force_login(self.user2)
-        response = self.guitar_get(Chart, self.chart.id)
+        response = self.guitar_get(Question, self.question.id)
         self.assertEqual(response.status_code, 404)  # Filtered out
     
     def test_owner_can_update(self):
         self.client.force_login(self.user1)
-        response = self.guitar_patch(Chart, self.chart.id, {'name': 'New'})
+        response = self.guitar_patch(Question, self.question.id, {'name': 'New'})
         self.assertEqual(response.status_code, 200)
     
     def test_non_owner_cannot_update(self):
         self.client.force_login(self.user2)
-        response = self.guitar_patch(Chart, self.chart.id, {'name': 'New'})
+        response = self.guitar_patch(Question, self.question.id, {'name': 'New'})
         self.assertEqual(response.status_code, 404)  # Filtered out
 ```
 

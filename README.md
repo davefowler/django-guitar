@@ -6,13 +6,13 @@
 
 **Django ORM for your frontend.**
 
-Django Guitar automatically generates a fully-typed TypeScript client from your Django models. Write your models once, query them from the frontend with Django's familiar syntax.
+Django Guitar automatically generates a fully-typed TypeScript client from your Django models. Write your models once, query them from the frontend with Django's familiar ORM syntax.
 
 ```typescript
 // Frontend code that feels like Django
-const charts = await Chart.objects.filter({ user_id: currentUser.id });
-const chart = await Chart.objects.get({ id: 1 });
-await Chart.objects.create({ name: "My Chart", data: [...] });
+const questions = await Question.objects.filter({ pub_date__gte: '2024-01-01' });
+const question = await Question.objects.get({ id: 1 });
+await Question.objects.create({ question_text: "What's your favorite color?", pub_date: new Date() });
 ```
 
 ## Features
@@ -22,7 +22,6 @@ await Chart.objects.create({ name: "My Chart", data: [...] });
 - 📝 **TypeScript types** - Full type safety with auto-generated interfaces
 - 🔗 **Relationships** - `select_related` and `prefetch_related` just like Django
 - 🎯 **Django syntax** - `filter`, `exclude`, `order_by` - all the hits
-- ⚡ **Custom methods** - Expose custom QuerySet methods to the frontend
 
 ## Model-Level Security (MLS)
 
@@ -31,13 +30,16 @@ Traditional REST APIs scatter permission logic across dozens of endpoints. Datab
 **Django Guitar introduces Model-Level Security (MLS)** - the best of both worlds:
 
 ```python
-class Chart(GuitarModel, models.Model):
+class Question(GuitarModel, models.Model):
+    question_text = models.CharField(max_length=200)
+    pub_date = models.DateTimeField('date published')
+    
     class GuitarManager:
         def filter_read(self, request, queryset):
-            return queryset.filter(user=request.user)
+            return queryset.filter(pub_date__lte=timezone.now())
         
         def filter_write(self, request, queryset):
-            return queryset.filter(user=request.user)
+            return queryset.filter(pub_date__gte=timezone.now())
 ```
 
 **Why MLS?**
@@ -66,20 +68,20 @@ pip install django-guitar
 
 ```python
 from django.db import models
+from django.utils import timezone
 from guitar import GuitarModel
 
-class Chart(GuitarModel, models.Model):
-    name = models.CharField(max_length=255)
-    data = models.JSONField()
-    user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
+class Question(GuitarModel, models.Model):
+    question_text = models.CharField(max_length=200)
+    pub_date = models.DateTimeField('date published')
     
     class GuitarMeta:
-        fields = ['id', 'name', 'data', 'created_at', 'user_id']
-        writable_fields = ['name', 'data']
+        fields = ['id', 'question_text', 'pub_date']
+        writable_fields = ['question_text', 'pub_date']
     
     class GuitarManager:
         def filter_read(self, request, queryset):
-            return queryset.filter(user=request.user)
+            return queryset.filter(pub_date__lte=timezone.now())
 ```
 
 ### Generate TypeScript client
@@ -88,18 +90,31 @@ class Chart(GuitarModel, models.Model):
 python manage.py generate_guitar_client
 ```
 
+**After model changes:** Run Django migrations (`makemigrations`/`migrate`) then regenerate the TypeScript client to update types.
+
 ### Use in your frontend
 
 ```typescript
-import { Chart } from './guitar';
+import { Question, Choice } from './guitar';
 
 // Just like Django!
-const charts = await Chart.objects
-  .filter({ name__icontains: 'sales' })
-  .exclude({ archived: true })
-  .order_by('-created_at')
-  .select_related('dashboard')
+const questions = await Question.objects
+  .filter({ question_text__icontains: 'favorite' })
+  .exclude({ pub_date__lt: '2024-01-01' })
+  .order_by('-pub_date')
+  .prefetch_related('choices')
   .limit(10);
+
+// Count (efficient server-side count)
+const count = await Question.objects.filter({ pub_date__year: 2024 }).count();
+// Returns: 20
+
+// Exists check
+const hasQuestions = await Question.objects.filter({ pub_date__year: 2024 }).exists();
+// Returns: true
+
+// Full-text search
+const results = await Question.objects.search('favorite color');
 ```
 
 ## Documentation
@@ -122,35 +137,90 @@ Django Guitar is in **beta** (v0.1.0). Here's what works and what's coming:
 - **Ordering** - Single and multi-field ordering
 - **Pagination** - Limit/offset pagination
 - **Field selection** - `only()` and `defer()` for field selection
+- **Relationship expansion** - `select_related()` and `prefetch_related()` with nested expansion support
 - **Model-Level Security** - Full permission system with `filter_read`, `filter_write`, `filter_delete`
 - **Lifecycle hooks** - `pre_create`, `post_create`, `pre_update`, `post_update`, etc.
+- **Count/Exists** - Efficient `.count()` and `.exists()` methods (server-side, not fetching all results)
+- **Full-text search** - PostgreSQL SearchVector or fallback to `icontains` across multiple fields
+- **Bulk operations** - `bulk_create()` and `bulk_update()` endpoints (bulk delete via `queryset.delete()`)
+- **Authentication** - Integrates with Django's built-in session/auth system (use Django's User model, permissions, etc.)
 - **TypeScript generation** - Auto-generated types and client
 
 ### 🚧 Coming Soon
 
-- **Relationship expansion** - `select_related()` and `prefetch_related()` are partially implemented (client-side only)
-- **Bulk operations** - `bulk_create()`, `bulk_update()`, bulk delete
-- **Custom QuerySet methods** - Expose custom manager methods to frontend
-- **Efficient `count()`** - Currently fetches all results; will add server-side count endpoint
-- **Proper `exclude()`** - Currently uses filter; will add true exclude support
+- **Custom QuerySet methods** - Expose custom manager methods to frontend:
+  ```python
+  class QuestionQuerySet(models.QuerySet):
+      def published(self):
+          return self.filter(pub_date__lte=timezone.now())
+      
+      def trending(self, days=7):
+          cutoff = timezone.now() - timedelta(days=days)
+          return self.annotate(
+              recent_votes=Count('choice__votes', filter=Q(choice__vote_date__gte=cutoff))
+          ).order_by('-recent_votes')
+  
+  class Question(GuitarModel, models.Model):
+      objects = QuestionQuerySet.as_manager()
+      
+      class GuitarMeta:
+          custom_methods = ['published', 'trending']  # Expose to frontend
+  ```
+  ```typescript
+  // Frontend usage (coming soon!)
+  const trending = await Question.objects.published().trending(30).limit(10);
+  ```
 - **Nested writes** - Create/update related objects in a single request
-- **Aggregations** - `Sum()`, `Avg()`, `Count()`, etc.
-- **Search** - Full-text search across multiple fields
 - **Cursor pagination** - More efficient pagination for large datasets
+- **Realtime sync** - Subscribe to changes via WebSockets for multi-player experiences
+
+### 🚫 Intentionally Not Supported
+
+These features are intentionally excluded for security, simplicity, or design reasons:
+
+- **Complex aggregations** (`Sum()`, `Avg()`, etc. via string parsing)
+  - **Why:** String parsing of aggregation expressions is error-prone and a potential security risk
+  - **Workaround:** Use custom QuerySet methods on your models:
+    ```python
+    class QuestionQuerySet(models.QuerySet):
+        def total_votes(self):
+            return self.aggregate(total=Sum('choice__votes'))['total']
+    
+    class Question(GuitarModel, models.Model):
+        objects = QuestionQuerySet.as_manager()
+        
+        class GuitarMeta:
+            custom_methods = ['total_votes']  # Expose to frontend
+    ```
+    ```typescript
+    const total = await Question.objects.filter({ id: 1 }).total_votes();
+    ```
+
+- **File uploads via JSON API**
+  - **Why:** File uploads require `multipart/form-data`, which doesn't fit the JSON REST API pattern
+  - **Workaround:** Use separate Django endpoints for file uploads, or direct S3/cloud storage uploads with signed URLs
+
+- **Raw SQL queries**
+  - **Why:** Security risk - raw SQL bypasses Django's ORM protections.  We don't want that on the front-end.
+  - **Workaround:** Use Django's ORM methods, or expose safe custom QuerySet methods
+
 
 ### ⚠️ Known Limitations
 
-- **Migrations** - Django Guitar doesn't handle migrations (use Django's migration system)
-- **Complex joins** - Deeply nested relationships may not work optimally
 - **Performance** - No built-in caching or rate limiting (add at Django/Nginx level)
-- **Authentication** - Uses Django's session/auth system; doesn't provide auth itself
-- **File uploads** - FileField/ImageField not yet supported (use separate upload endpoints)
+- **Bulk operations and lifecycle hooks** - `bulk_create()` and `bulk_update()` use Django's bulk methods, which bypass `save()` and signals (same as Django's behavior). Lifecycle hooks like `post_create` won't run. Use individual `create()`/`update()` calls if you need hooks.
 
 ### 📝 Field Lookups Supported
 
-Currently supported lookups: `exact`, `iexact`, `contains`, `icontains`, `startswith`, `istartswith`, `endswith`, `iendswith`, `gt`, `gte`, `lt`, `lte`, `in`, `isnull`, `year`, `month`, `day`, `week_day`, `hour`, `minute`, `second`, `range`, `regex`, `iregex`.
+Currently supported lookups:
 
-Not yet supported: `date`, `time`, `week`, `quarter`, `iso_year`, and some advanced lookups.
+**Basic comparisons:** `exact`, `iexact`, `contains`, `icontains`, `startswith`, `istartswith`, `endswith`, `iendswith`, `gt`, `gte`, `lt`, `lte`, `in`, `isnull`, `range`
+
+**Date/time lookups:** `year`, `month`, `day`, `week_day`, `hour`, `minute`, `second`, `date`, `time`, `week`, `quarter`, `iso_year`
+
+**Text lookups:** `regex`, `iregex`
+
+All standard Django ORM field lookups are now supported!
 
 ## How It Works
 
@@ -166,7 +236,7 @@ Not yet supported: `date`, `time`, `week`, `quarter`, `iso_year`, and some advan
                                    │
                     ┌──────────────┴──────────────┐
                     │     TypeScript Client       │
-                    │  Chart.objects.filter(...)  │
+                    │  Question.objects.filter(...)  │
                     └─────────────────────────────┘
 ```
 

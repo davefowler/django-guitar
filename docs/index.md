@@ -6,9 +6,9 @@ Write your Django models once, get a fully-typed TypeScript client that works ju
 
 ```typescript
 // Frontend code that feels like Django
-const charts = await Chart.objects.filter({ user_id: currentUser.id });
-const chart = await Chart.objects.get({ id: 1 });
-await Chart.objects.create({ name: "My Chart", data: [...] });
+const questions = await Question.objects.filter({ pub_date__gte: '2024-01-01' });
+const question = await Question.objects.get({ id: 1 });
+await Question.objects.create({ question_text: "What's your favorite color?", pub_date: new Date() });
 ```
 
 ---
@@ -20,16 +20,16 @@ await Chart.objects.create({ name: "My Chart", data: [...] });
 **After Guitar:** Add one mixin, get everything for free.
 
 ```python
+from django.utils import timezone
 from guitar import GuitarModel
 
-class Chart(GuitarModel, models.Model):
-    name = models.CharField(max_length=255)
-    data = models.JSONField()
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+class Question(GuitarModel, models.Model):
+    question_text = models.CharField(max_length=200)
+    pub_date = models.DateTimeField('date published')
     
     class GuitarManager:
         def filter_read(self, request, queryset):
-            return queryset.filter(user=request.user)
+            return queryset.filter(pub_date__lte=timezone.now())
 ```
 
 That's it. You now have:
@@ -45,21 +45,21 @@ That's it. You now have:
 
 ```typescript
 // Filter, order, paginate - just like Django
-const charts = await Chart.objects
-  .filter({ name__icontains: 'sales' })
-  .exclude({ archived: true })
-  .order_by('-created_at')
+const questions = await Question.objects
+  .filter({ question_text__icontains: 'favorite' })
+  .exclude({ pub_date__lt: '2024-01-01' })
+  .order_by('-pub_date')
   .limit(10);
 
 // Include related objects
-const chart = await Chart.objects
+const question = await Question.objects
   .get({ id: 1 })
-  .select_related('dashboard', 'created_by');
+  .prefetch_related('choices');
 
 // CRUD operations
-await Chart.objects.create({ name: 'New Chart', data: {} });
-await Chart.objects.filter({ id: 1 }).update({ name: 'Updated' });
-await Chart.objects.filter({ id: 1 }).delete();
+await Question.objects.create({ question_text: 'New Question', pub_date: new Date() });
+await Question.objects.filter({ id: 1 }).update({ question_text: 'Updated' });
+await Question.objects.filter({ id: 1 }).delete();
 ```
 
 ---
@@ -69,15 +69,18 @@ await Chart.objects.filter({ id: 1 }).delete();
 Traditional APIs scatter permission logic across endpoints. Database RLS centralizes this but requires writing security in SQL. **Django Guitar brings Model-Level Security** - centralized permissions in Python, right where Django developers expect them.
 
 ```python
-class Chart(GuitarModel, models.Model):
+class Question(GuitarModel, models.Model):
+    question_text = models.CharField(max_length=200)
+    pub_date = models.DateTimeField('date published')
+    
     class GuitarManager:
         def filter_read(self, request, queryset):
-            # Users see their own charts + public ones
-            return queryset.filter(Q(user=request.user) | Q(is_public=True))
+            # Users see published questions
+            return queryset.filter(pub_date__lte=timezone.now())
         
         def filter_write(self, request, queryset):
-            # Users can only edit their own
-            return queryset.filter(user=request.user)
+            # Users can only edit unpublished questions
+            return queryset.filter(pub_date__gte=timezone.now())
 ```
 
 **Why MLS over RLS?**

@@ -66,11 +66,11 @@ class GuitarMeta:
 ```
 
 **Available operations:**
-- `list` - GET collection (`Chart.objects.all()`, `Chart.objects.filter()`)
-- `retrieve` - GET single (`Chart.objects.get()`)
-- `create` - POST (`Chart.objects.create()`)
-- `update` - PATCH (`Chart.objects.update()`)
-- `delete` - DELETE (`Chart.objects.delete()`)
+- `list` - GET collection (`Question.objects.all()`, `Question.objects.filter()`)
+- `retrieve` - GET single (`Question.objects.get()`)
+- `create` - POST (`Question.objects.create()`)
+- `update` - PATCH (`Question.objects.update()`)
+- `delete` - DELETE (`Question.objects.delete()`)
 
 ### Pagination
 
@@ -163,13 +163,13 @@ These methods filter querysets based on the current user.
 ```python
 class GuitarManager:
     def filter_read(self, request, queryset):
-        """Users see their own charts + public charts."""
+        """Users see their own questions + public questions."""
         return queryset.filter(
             Q(user=request.user) | Q(is_public=True)
         )
     
     def filter_write(self, request, queryset):
-        """Users can only edit their own charts."""
+        """Users can only edit their own questions."""
         # Already filtered by filter_read, so just narrow further
         return queryset.filter(user=request.user)
 ```
@@ -242,13 +242,13 @@ class GuitarManager:
 class GuitarManager:
     def post_create(self, request, instance):
         """Send notification on create."""
-        notify_team(f"New chart created: {instance.name}")
+        notify_team(f"New question created: {instance.name}")
     
     def pre_delete(self, request, instance):
         """Archive instead of delete."""
         instance.archived = True
         instance.save()
-        raise PermissionDenied("Charts are archived, not deleted")
+        raise PermissionDenied("Questions are archived, not deleted")
 ```
 
 ### Configuration
@@ -295,62 +295,62 @@ GUITAR = {
 
 ```typescript
 // Filtering
-Chart.objects.all()
-Chart.objects.filter({ user_id: 5 })
-Chart.objects.filter({ name__icontains: 'sales' })
-Chart.objects.exclude({ archived: true })
+Question.objects.all()
+Question.objects.filter({ user_id: 5 })
+Question.objects.filter({ name__icontains: 'sales' })
+Question.objects.exclude({ archived: true })
 
 // Ordering
-Chart.objects.order_by('-created_at')
-Chart.objects.order_by('name', '-created_at')
+Question.objects.order_by('-created_at')
+Question.objects.order_by('name', '-created_at')
 
 // Pagination
-Chart.objects.limit(10)
-Chart.objects.offset(20)
-Chart.objects.limit(10).offset(20)
+Question.objects.limit(10)
+Question.objects.offset(20)
+Question.objects.limit(10).offset(20)
 
 // Field selection
-Chart.objects.only('id', 'name')
-Chart.objects.defer('large_data_field')
+Question.objects.only('id', 'name')
+Question.objects.defer('large_data_field')
 
 // Relations
-Chart.objects.select_related('dashboard')
-Dashboard.objects.prefetch_related('charts')
+Question.objects.select_related('dashboard')
+Dashboard.objects.prefetch_related('questions')
 ```
 
 ### Terminal Methods (Return data)
 
 ```typescript
 // Single objects
-await Chart.objects.get({ id: 1 })           // Throws if not found
-await Chart.objects.filter({...}).first()    // Returns null if not found
-await Chart.objects.filter({...}).last()
+await Question.objects.get({ id: 1 })           // Throws if not found
+await Question.objects.filter({...}).first()    // Returns null if not found
+await Question.objects.filter({...}).last()
 
 // Collections
-await Chart.objects.all()
-await Chart.objects.filter({...})
+await Question.objects.all()
+await Question.objects.filter({...})
 
 // Aggregates
-await Chart.objects.filter({...}).count()
-await Chart.objects.filter({...}).exists()
+await Question.objects.filter({...}).count()
+await Question.objects.filter({...}).exists()
 ```
 
 ### Write Methods
 
 ```typescript
 // Create
-await Chart.objects.create({ name: 'New', data: {} })
+await Question.objects.create({ name: 'New', data: {} })
 
 // Update
-await Chart.objects.filter({ id: 1 }).update({ name: 'Updated' })
+await Question.objects.filter({ id: 1 }).update({ name: 'Updated' })
 
 // Delete
-await Chart.objects.filter({ id: 1 }).delete()
+await Question.objects.filter({ id: 1 }).delete()
 
 // Bulk
-await Chart.objects.bulk_create([...])
-await Chart.objects.filter({...}).update({...})  // Bulk update
-await Chart.objects.filter({...}).delete()       // Bulk delete
+await Question.objects.bulk_create([...])
+await Question.objects.filter({...}).update({...})  // Bulk update
+await Question.objects.filter({...}).delete()       // Bulk delete
 ```
 
 ### Field Lookups

@@ -1,0 +1,4 @@
+Django>=4.2
+django-guitar
+django-cors-headers>=4.0.0
+

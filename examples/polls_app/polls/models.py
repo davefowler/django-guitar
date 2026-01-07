@@ -28,7 +28,7 @@ class Question(GuitarModel, models.Model):
     def was_published_recently(self) -> bool:
         """Returns True if the question was published within the last day."""
         now = timezone.now()
-        return now - timezone.timedelta(days=1) <= self.pub_date <= now
+        return now - timedelta(days=1) <= self.pub_date <= now
     
     class GuitarMeta:
         fields = ['id', 'question_text', 'pub_date']

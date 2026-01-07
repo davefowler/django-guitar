@@ -29,9 +29,24 @@
 }
 
 .create-form-container h1 {
-  margin: 0 0 2rem 0;
+  margin: 0 0 1rem 0;
   color: #333;
   font-size: 1.8rem;
+}
+
+.info-text {
+  background: #e8f4fd;
+  border: 1px solid #b8daff;
+  color: #004085;
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+}
+
+.info-text a {
+  color: #004085;
+  font-weight: 500;
 }
 
 .error-message {

@@ -180,7 +180,7 @@ These features are intentionally excluded for security, simplicity, or design re
 
 - **Complex aggregations** (`Sum()`, `Avg()`, etc. via string parsing)
   - **Why:** String parsing of aggregation expressions is error-prone and a potential security risk
-  - **Workaround:** Use custom QuerySet methods on your models:
+  - **Workaround:** When custom QuerySet methods land (see Coming Soon above), you'll be able to expose safe aggregations:
     ```python
     class QuestionQuerySet(models.QuerySet):
         def total_votes(self):
